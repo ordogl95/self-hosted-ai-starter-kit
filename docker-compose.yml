@@ -48,7 +48,7 @@ x-init-ollama: &init-ollama
     - OLLAMA_HOST=ollama:11434
   command:
     - "-c"
-    - "sleep 3; ollama pull llama3.2"
+    - "sleep 3; ollama pull llama3.2:1b"
 
 # ===========================================
 # Docling Base Configuration (YAML Anchor)
@@ -103,6 +103,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 2g
 
   n8n-import:
     <<: *service-n8n
@@ -147,6 +151,10 @@ services:
         condition: service_healthy
       n8n-import:
         condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 2g
 
   qdrant:
     image: qdrant/qdrant
@@ -158,6 +166,10 @@ services:
       - 6333:6333
     volumes:
       - qdrant_storage:/qdrant/storage
+    deploy:
+      resources:
+        limits:
+          memory: 2g
 
   # ===========================================
   # Static File Server - Serves shared folder
@@ -185,6 +197,10 @@ services:
           add_header Access-Control-Allow-Origin *;
         }
       }' > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
 
   ollama-cpu:
     profiles: ["cpu"]
@@ -193,13 +209,16 @@ services:
   ollama-gpu:
     profiles: ["gpu-nvidia"]
     <<: *service-ollama
+    environment:
+      - OLLAMA_GPU=0
+      - CUDA_VISIBLE_DEVICES=""
+      - HIP_VISIBLE_DEVICES=""
     deploy:
       resources:
+        limits:
+          memory: 5g
         reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+          memory: 3g
 
   ollama-gpu-amd:
     profiles: ["gpu-amd"]
@@ -239,6 +258,10 @@ services:
   docling-cpu:
     profiles: ["cpu"]
     <<: *service-docling
+    deploy:
+      resources:
+        limits:
+          memory: 3g
 
   docling-gpu:
     profiles: ["gpu-nvidia"]
@@ -252,6 +275,10 @@ services:
       - GRADIO_TEMP_DIR=/shared/docling-scratch
       - NVIDIA_VISIBLE_DEVICES=all
       - DOCLING_SERVE_ENABLE_REMOTE_SERVICES=true
+    deploy:
+      resources:
+        limits:
+          memory: 3g
     runtime: nvidia
 
   docling-gpu-amd:
@@ -266,6 +293,10 @@ services:
       - GRADIO_TEMP_DIR=/shared/docling-scratch
       - ROCR_VISIBLE_DEVICES=0
       - DOCLING_SERVE_ENABLE_REMOTE_SERVICES=true
+    deploy:
+      resources:
+        limits:
+          memory: 3g
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
