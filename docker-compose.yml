@@ -22,6 +22,11 @@ x-n8n: &service-n8n
     - N8N_USER_MANAGEMENT_JWT_SECRET
     - OLLAMA_HOST=${OLLAMA_HOST:-ollama:11434}
     - N8N_RESTRICT_FILE_ACCESS_TO=/data/shared
+    - N8N_SECURE_COOKIE=false
+    - N8N_PROTOCOL=http
+    - N8N_HOST=0.0.0.0
+    - N8N_EDITOR_USE_HTTPS=false
+    - NODE_ENV=development
     - NODES_EXCLUDE=[]
   env_file:
     - path: .env
@@ -155,6 +160,30 @@ services:
       resources:
         limits:
           memory: 2g
+
+  # ===========================================
+  # Nginx Reverse Proxy with SSL/TLS
+  # ===========================================
+  # Reverse proxy for n8n with HTTPS support via self-signed certificates
+  # Access n8n at https://192.168.50.182
+  n8n-proxy:
+    image: nginx:alpine
+    hostname: n8n-proxy
+    container_name: n8n-proxy
+    networks: ['demo']
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - n8n
+    deploy:
+      resources:
+        limits:
+          memory: 500m
 
   qdrant:
     image: qdrant/qdrant
