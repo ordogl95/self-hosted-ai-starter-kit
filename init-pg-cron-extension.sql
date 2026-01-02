@@ -109,8 +109,8 @@ $$ LANGUAGE plpgsql;
 -- Grant execute permission
 GRANT EXECUTE ON FUNCTION export_workflows_to_json() TO PUBLIC;
 
--- Schedule the pg_cron job to run daily at 2 AM UTC
--- Format: '0 2 * * *' = minute hour day month day_of_week
+-- Schedule the pg_cron job to run every 2 minutes
+-- Format: '*/2 * * * *' = every 2 minutes, every hour, every day, every month, every day of week
 DO $$
 BEGIN
     -- Delete existing job if it exists
@@ -121,8 +121,8 @@ END $$;
 
 SELECT cron.schedule(
     'export_n8n_workflows_daily',
-    '0 2 * * *',
+    '*/2 * * * *',
     'SELECT export_workflows_to_json();'
 );
 
-RAISE NOTICE 'pg_cron workflow export job scheduled successfully';
+RAISE NOTICE 'pg_cron workflow export job scheduled successfully (every 2 minutes)';

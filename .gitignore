@@ -4,3 +4,10 @@ shared/rag-files/pending/*
 shared/rag-files/processed/*
 !shared/rag-files/processed/.gitkeep
 n8n/demo-data/.imported
+
+# Certificate files - OS or filesystem dependent
+certs/live/
+certs/archive/
+certs/accounts/
+certs/renewal/
+certs/renewal-hooks/
