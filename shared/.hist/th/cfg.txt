@@ -1,0 +1,7 @@
+th_dec(['pil', 'ff'])
+th_no_webp(False)
+th_no_jpg(False)
+th_qv(40)
+thsize(320x256)
+th_spec_p(1)
+convt(60.0)
