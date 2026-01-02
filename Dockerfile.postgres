@@ -1,0 +1,44 @@
+# Build stage for pg_cron using Debian to avoid musl binary incompatibility
+FROM postgres:16-bookworm as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y build-essential postgresql-server-dev-16 ca-certificates curl git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download pg_cron from GitHub releases
+WORKDIR /tmp
+RUN curl -L https://github.com/citusdata/pg_cron/archive/refs/tags/v1.6.1.tar.gz -o pg_cron.tar.gz && \
+    tar xzf pg_cron.tar.gz
+
+WORKDIR /tmp/pg_cron-1.6.1
+# Build and install pg_cron
+RUN make
+RUN make install
+
+# Find and verify where files were created
+RUN find / -name "pg_cron.so" -o -name "pg_cron.control" 2>/dev/null
+
+# Final stage - use Debian for binary compatibility with glibc-built extension
+FROM postgres:16-bookworm
+
+# Copy the compiled pg_cron extension from builder - it's in /usr/lib/postgresql/*/lib/
+COPY --from=builder /usr/lib/postgresql/16/lib/pg_cron.so /usr/lib/postgresql/16/lib/
+COPY --from=builder /usr/share/postgresql/16/extension/ /usr/share/postgresql/16/extension/
+
+# Configure PostgreSQL to load pg_cron and set cron.database_name
+# We need to append to the base postgresql.conf template in the image
+RUN echo "" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "# pg_cron configuration" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "shared_preload_libraries = 'pg_cron'" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "cron.database_name = 'n8n'" >> /usr/share/postgresql/postgresql.conf.sample
+
+# Create initialization scripts directory
+RUN mkdir -p /docker-entrypoint-initdb.d
+
+# Copy initialization scripts
+COPY init-pg-cron.sql /docker-entrypoint-initdb.d/01-init-db.sql
+COPY init-pg-cron-extension.sql /docker-entrypoint-initdb.d/02-init-extensions.sql
+COPY init-pg-cron-workflow-export.sql /docker-entrypoint-initdb.d/03-workflow-export.sql
+
+# Verify PostgreSQL version
+RUN psql --version

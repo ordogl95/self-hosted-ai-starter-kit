@@ -97,16 +97,24 @@ x-docling: &service-docling
 
 services:
   postgres:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     hostname: postgres
     networks: ['demo']
     restart: unless-stopped
+    command:
+      - 'postgres'
+      - '-c'
+      - 'shared_preload_libraries=pg_cron'
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB
+      - TZ=Europe/Budapest
     volumes:
       - postgres_storage:/var/lib/postgresql/data
+      - ./n8n/demo-data/workflows:/workflows
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 5s
@@ -275,6 +283,7 @@ services:
       - PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION=False
       - PGADMIN_CONFIG_COOKIE_DEFAULT_SECURE=False
       - PGADMIN_CONFIG_COOKIE_SAMESITE='Lax'
+      - PGADMIN_CONFIG_ENABLE_PSQL=True
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     deploy:
