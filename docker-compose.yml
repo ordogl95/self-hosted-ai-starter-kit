@@ -8,6 +8,10 @@ volumes:
   npm_db:
   homarr_data:
   pgadmin_data:
+  omni_tools_data:
+  it_tools_data:
+  whisper_models:
+  whisper_outputs:
 
 networks:
   demo:
@@ -420,3 +424,93 @@ services:
     group_add:
       - 44    # video group GID (run: getent group video)
       - 109   # render group GID (run: getent group render)
+
+  # ===========================================
+  # Omni Tools - Collection of Online Tools
+  # ===========================================
+  # Free and open-source collection of online tools
+  # Access at http://localhost:9001
+  # GitHub: https://github.com/iib0011/omni-tools
+  omni-tools:
+    build:
+      context: ./services/omni-tools
+      dockerfile: Dockerfile
+    image: omni-tools:latest
+    hostname: omni-tools
+    container_name: omni-tools
+    networks: ['demo']
+    restart: unless-stopped
+    ports:
+      - 9001:80
+    volumes:
+      - omni_tools_data:/usr/share/nginx/html
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # ===========================================
+  # IT Tools - Useful Tools for IT Professionals
+  # ===========================================
+  # Open-source collection of tools for IT professionals
+  # Access at http://localhost:9002
+  # GitHub: https://github.com/CorentinTh/it-tools
+  it-tools:
+    build:
+      context: ./services/it-tools
+      dockerfile: Dockerfile
+    image: it-tools:latest
+    hostname: it-tools
+    container_name: it-tools
+    networks: ['demo']
+    restart: unless-stopped
+    ports:
+      - 9002:80
+    volumes:
+      - it_tools_data:/usr/share/nginx/html
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # ===========================================
+  # Whisper-WebUI - Speech-to-Text Web Interface
+  # ===========================================
+  # Gradio-based browser interface for OpenAI Whisper
+  # For easy subtitle and transcription generation
+  # Access at http://localhost:7860
+  # GitHub: https://github.com/jhj0517/Whisper-WebUI
+  # Configured for CPU mode (Intel) - for GPU, modify the Dockerfile build
+
+  whisper-webui-cpu:
+    profiles: ["cpu", "whisper"]
+    image: ghcr.io/jhj0517/whisper-webui:latest
+    container_name: whisper-webui
+    hostname: whisper-webui
+    networks: ['demo']
+    restart: unless-stopped
+    ports:
+      - 7860:7860
+    volumes:
+      - whisper_models:/Whisper-WebUI/models
+      - whisper_outputs:/Whisper-WebUI/outputs
+      - ./shared:/Whisper-WebUI/shared
+    environment:
+      # CPU mode for Intel - uses the standard PyTorch CPU build
+      # The requirements.txt uses: --extra-index-url https://download.pytorch.org/whl/cpu
+      - PYTORCH_ENABLE_MPS_FALLBACK=1
+    stdin_open: true
+    tty: true
+    entrypoint: ["python", "app.py", "--server_port", "7860", "--server_name", "0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+        reservations:
+          memory: 2g
